@@ -19,6 +19,7 @@ fi
 # you'd need cross-compilers installed for each supported architecture, e.g.:
 # sudo dnf install gcc-x86_64-linux-gnu \
 #                  gcc-aarch64-linux-gnu \
+#                  gcc-arm-linux-gnueabihf \
 #                  gcc-s390x-linux-gnu \
 #                  gcc-ppc64le-linux-gnu \
 #                  binutils-ppc64le-linux-gnu \
@@ -35,19 +36,29 @@ build_arch(){
 			| sed 's/x86_64/x86/'				\
 			| sed 's/i686/x86/'				\
 			| sed 's/aarch64/arm64/'			\
+			| sed 's/armv7l/arm/'				\
 			| sed 's/ppc64le/powerpc/'			\
 			| sed 's/riscv64/riscv/'			\
 			| sed 's/s390x/s390/'				\
+	)
+	local cross_arch=$(						\
+		case $arch in						\
+		(x86_64|i686|aarch64|ppc64le|riscv64|s390x)		\
+			printf "$arch-linux-gnu-" ;;			\
+		(armv7l)						\
+			printf "$arch_slug-linux-gnueabihf-" ;;		\
+		esac							\
 	)
 
 	echo "Building $arch ($arch_slug) into $build_dir..."
 	(
 		cd "$LINUX_REPO"
 		make O="$build_dir_abs"					\
-		     ARCH=$arch_slug CROSS_COMPILE=$arch-linux-gnu-	\
+		     ARCH=$arch_slug CROSS_COMPILE=$cross_arch		\
 		     tinyconfig &> "$kernel_log"
 		cat >> "$build_dir_abs/.config" <<- EOF
 			CONFIG_64BIT=y
+			CONFIG_MMU=y
 			CONFIG_DEBUG_INFO=y
 			CONFIG_DEBUG_INFO_DWARF4=y
 			CONFIG_DEBUG_INFO_BTF=y
@@ -66,10 +77,10 @@ build_arch(){
 			CONFIG_PERF_EVENTS=y
 		EOF
 		make O="$build_dir_abs"					\
-		     ARCH=$arch_slug CROSS_COMPILE=$arch-linux-gnu-	\
+		     ARCH=$arch_slug CROSS_COMPILE=$cross_arch		\
 		     olddefconfig &>> "$kernel_log"
 		make O="$build_dir_abs"					\
-		     ARCH=$arch_slug CROSS_COMPILE=$arch-linux-gnu-	\
+		     ARCH=$arch_slug CROSS_COMPILE=$cross_arch		\
 		     -j$(nproc) all &>> "$kernel_log"
 
 		"$RETSNOOP_REPO/src/bpftool" btf dump			\
@@ -91,6 +102,6 @@ build_arch(){
 	make bpftool &> "$BUILD_DIR/bpftool_build.txt"
 )
 
-for arch in x86_64 aarch64 s390x ppc64le riscv64; do
+for arch in x86_64 aarch64 armv7l s390x ppc64le riscv64; do
 	build_arch $arch
 done
