@@ -27,6 +27,7 @@ ARCH ?= $(shell uname -m						\
 		| sed 's/x86_64/x86/'					\
 		| sed 's/i686/x86/'					\
 		| sed 's/aarch64/arm64/'				\
+		| sed 's/armv7l/arm/'					\
 		| sed 's/ppc64le/powerpc/'				\
 		| sed 's/riscv64/riscv/'				\
 		| sed 's/s390x/s390/'					\
