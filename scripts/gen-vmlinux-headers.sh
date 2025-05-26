@@ -98,8 +98,9 @@ build_arch(){
 
 (
 	echo "Building bpftool..."
+	mkdir -p $BUILD_DIR
 	cd "$RETSNOOP_REPO/src"
-	make bpftool &> "$BUILD_DIR/bpftool_build.txt"
+	make -j$(nproc) bpftool &> "$BUILD_DIR/bpftool_build.txt"
 )
 
 for arch in x86_64 aarch64 armv7l s390x ppc64le riscv64; do
